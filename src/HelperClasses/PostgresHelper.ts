@@ -134,4 +134,20 @@ EOSQL`);
             'sudo systemctl restart postgresql'
         ], onLog);
     }
+    async dropDatabase(
+        databaseName: string,
+        onLog?: (chunk: string) => void
+    ): Promise<void> {
+        // Step 1: Terminate all connections to the database
+        await this.ssh.exec(
+            `sudo -u postgres psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${databaseName}' AND pid <> pg_backend_pid();"`,
+            onLog
+        );
+
+        // Step 2: Drop the database
+        await this.ssh.exec(
+            `sudo -u postgres psql -c "DROP DATABASE IF EXISTS ${databaseName};"`,
+            onLog
+        );
+    }
 }
