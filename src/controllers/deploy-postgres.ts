@@ -6,9 +6,9 @@ import decryptPassword from "../utils/decryptPassword";
 import {PostgresSSHHelper} from "../HelperClasses/PostgresHelper";
 
 const deployPostgresController = async ({body,set,userId}:Context | any) => {
-    const req = body as { vpsId: string,vpsIp:string, dbName: string,userName:string, password: string,ownerId?:string };
-    const {vpsId,vpsIp,dbName,userName,password,ownerId} = req;
-    if(!ownerId || !userName || !password || !dbName || !vpsIp || !vpsId){
+    const req = body as { vpsId: string,vpsIp:string, dbName: string,userName:string, password: string };
+    const {vpsId,vpsIp,dbName,userName,password,} = req;
+    if(!userName || !password || !dbName || !vpsIp || !vpsId){
         set.status = StatusCode.BAD_REQUEST;
         return {
             message: "Invalid request body"
@@ -25,7 +25,7 @@ const deployPostgresController = async ({body,set,userId}:Context | any) => {
 
 
         const {machine} = isMachineVerified;
-        const decryptedPassword = await decryptPassword(password);
+        const decryptedPassword = await decryptPassword(machine.vps_password);
         const ssh = new SSHClient({
             host: machine.vps_ip,
             username: "root",
@@ -36,11 +36,8 @@ const deployPostgresController = async ({body,set,userId}:Context | any) => {
         const pgHelper = new PostgresSSHHelper(ssh);
         await pgHelper.install();
         await pgHelper.start();
-        if(ownerId){
-            await pgHelper.createUserAndDatabase({database: dbName, username: userName, password: decryptedPassword});
-        }else{
-            await pgHelper.createDatabase(dbName);
-        }
+        await pgHelper.createUserAndDatabase({database: dbName, username: userName, password: password});
+        await pgHelper.allowRemoteConnections();
         return {
             status: StatusCode.OK,
             message: "Postgres deployment started successfully"

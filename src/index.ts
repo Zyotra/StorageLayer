@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import {config} from "dotenv";
 import {cors} from "@elysiajs/cors"
 import checkAuth from "./middlewares/checkAuth";
+import deployPostgresController from "./controllers/deploy-postgres";
 config()
 const app = new Elysia();
 const origins = ["http://localhost:5173","https://zyotraportal.ramkrishna.cloud"];
@@ -21,12 +22,7 @@ app.get("/",()=>{
 })
 app
     .use(checkAuth)
-    .post("/deploy-postgres",()=>{
-        return {
-            status:"success",
-            message:"Redis instance created successfully"
-        }
-    })
+    .post("/deploy-postgres",deployPostgresController)
 app.listen(process.env.PORT as string)
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`

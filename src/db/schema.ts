@@ -5,7 +5,6 @@ export const deployed_db=pgTable("deployed_db",{
     db_name:varchar("name").notNull(),
     username:varchar("username").notNull(),
     password:varchar("").notNull(),
-    db_owner:varchar("db_owner").notNull(),
     host:varchar("host").notNull(),
     db_type:varchar("db_type").notNull(),
     vpsId:integer("vpsId").notNull(),
@@ -13,7 +12,6 @@ export const deployed_db=pgTable("deployed_db",{
     status:varchar("status").notNull(),
     created_at:timestamp("created_at").notNull()
 })
-
 // export const deployed_caching=pgTable("deployed_caching",{
 //     id:serial("id").primaryKey(),
 //     host:varchar("host").notNull(),
