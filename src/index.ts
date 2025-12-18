@@ -21,7 +21,7 @@ app.get("/",()=>{
 })
 app
     .use(checkAuth)
-    .post("/create-redis",()=>{
+    .post("/deploy-postgres",()=>{
         return {
             status:"success",
             message:"Redis instance created successfully"

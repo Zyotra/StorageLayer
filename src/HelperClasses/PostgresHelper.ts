@@ -2,9 +2,10 @@ import SSHClient from "../SSHClient/SSHClient";
 
 interface PostgresConfig {
     database: string;
-    username: string;
+    username?: string;
     password: string;
 }
+
 interface CommandResult {
     command: string;
     output: string;
@@ -12,7 +13,8 @@ interface CommandResult {
 }
 
 class PostgresSSHHelper {
-    constructor(private ssh: SSHClient) {}
+    constructor(private ssh: SSHClient) {
+    }
 
     async install(onLog?: (chunk: string) => void): Promise<void> {
         await this.ssh.runSequential([
@@ -31,7 +33,18 @@ class PostgresSSHHelper {
     async start(onLog?: (chunk: string) => void): Promise<void> {
         await this.ssh.exec('sudo systemctl start postgresql', onLog);
     }
-
+    async createDatabase(
+        database: string,
+        onLog?: (chunk: string) => void
+    ){
+        const dbExists = await this.ssh.exec(
+            `sudo -u postgres psql -lqt | cut -d \\| -f 1 | grep -qw ${database} && echo "1" || echo "0"`
+        );
+        if(dbExists.output.trim() === '0'){
+            await this.ssh.exec(`sudo -u postgres createdb ${database}`, onLog);
+        }
+        throw new Error("Database already exists")
+    }
     async createUserAndDatabase(
         config: PostgresConfig,
         onLog?: (chunk: string) => void
@@ -140,7 +153,6 @@ async function setupPostgres() {
 
     // Start
     await pgHelper.start();
-
     // Create user and database
     await pgHelper.createUserAndDatabase({
         database: 'myapp',
