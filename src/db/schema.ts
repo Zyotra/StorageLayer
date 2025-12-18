@@ -1,6 +1,6 @@
 import {pgTable, timestamp, varchar, text, integer, serial} from "drizzle-orm/pg-core";
 
-export const databases=pgTable("databases",{
+export const deployed_db=pgTable("deployed_db",{
     id:serial("id").primaryKey(),
     db_name:varchar("name").notNull(),
     username:varchar("username").notNull(),
@@ -13,3 +13,9 @@ export const databases=pgTable("databases",{
     status:varchar("status").notNull(),
     created_at:timestamp("created_at").notNull()
 })
+
+// export const deployed_caching=pgTable("deployed_caching",{
+//     id:serial("id").primaryKey(),
+//     host:varchar("host").notNull(),
+//     userId:integer("userId").notNull(),
+// })

@@ -12,7 +12,7 @@ interface CommandResult {
     exitCode: number;
 }
 
-class PostgresSSHHelper {
+export class PostgresSSHHelper {
     constructor(private ssh: SSHClient) {
     }
 
@@ -134,37 +134,4 @@ EOSQL`);
             'sudo systemctl restart postgresql'
         ], onLog);
     }
-}
-
-// Usage example:
-async function setupPostgres() {
-    const ssh = new SSHClient({
-        host: 'your-server.com',
-        username: 'ubuntu',
-        privateKey: '...'
-    });
-
-    await ssh.connect();
-
-    const pgHelper = new PostgresSSHHelper(ssh);
-
-    // Install
-    await pgHelper.install((log) => console.log(log));
-
-    // Start
-    await pgHelper.start();
-    // Create user and database
-    await pgHelper.createUserAndDatabase({
-        database: 'myapp',
-        username: 'appuser',
-        password: 'securepassword123'
-    });
-
-    // Execute custom SQL
-    await pgHelper.executeSQL(
-        'CREATE TABLE users (id SERIAL PRIMARY KEY, name VARCHAR(100));',
-        'myapp'
-    );
-
-    ssh.close();
 }
