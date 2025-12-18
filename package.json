@@ -6,7 +6,11 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
-    "elysia": "latest"
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/ssh2": "^1.15.5",
+    "elysia": "latest",
+    "jsonwebtoken": "^9.0.3",
+    "ssh2": "^1.17.0"
   },
   "devDependencies": {
     "bun-types": "latest"
