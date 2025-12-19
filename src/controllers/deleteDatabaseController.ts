@@ -11,6 +11,7 @@ import { eq } from "drizzle-orm";
 const deleteDatabaseController=async({body,params,set,userId}:Context | any)=>{
     const req=body as {dbName:string,vpsIp:string,vpsId:string}
     const databaseId=params.id;
+    var ssh:SSHClient | null =null;
     if(!databaseId){
         set.status=StatusCode.BAD_REQUEST;
         return {
@@ -36,7 +37,7 @@ const deleteDatabaseController=async({body,params,set,userId}:Context | any)=>{
     const {machine}=isMachineVerified;
     try {
         const hashedPassword = await decryptPassword(machine.vps_password);
-        const ssh = new SSHClient({
+        ssh = new SSHClient({
             host: machine.vps_ip,
             username: "root",
             password: hashedPassword
@@ -44,6 +45,8 @@ const deleteDatabaseController=async({body,params,set,userId}:Context | any)=>{
         await ssh.connect();
         const pgHelper = new PostgresSSHHelper(ssh);
         await pgHelper.dropDatabase(database[0].dbName);
+        await db.delete(deployed_db).where(eq(deployed_db.id,databaseId));
+        await ssh.close();
         return {
             status: StatusCode.OK,
             message: "Database deleted successfully"
@@ -53,6 +56,10 @@ const deleteDatabaseController=async({body,params,set,userId}:Context | any)=>{
         return {
             status:"invalid request",
             message: error
+        }
+    }finally{
+        if(ssh){
+            ssh.close();
         }
     }
 }

@@ -6,6 +6,7 @@ import decryptPassword from "../utils/decryptPassword";
 import {PostgresSSHHelper} from "../HelperClasses/PostgresHelper";
 import {db} from "../db/client";
 import {deployed_db} from "../db/schema";
+import { and, eq } from "drizzle-orm";
 
 const deployPostgresController = async ({body,set,userId}:Context | any) => {
     const req = body as { vpsId: string,vpsIp:string, dbName: string,userName:string, password: string };
@@ -26,10 +27,15 @@ const deployPostgresController = async ({body,set,userId}:Context | any) => {
     var ssh:SSHClient | null =null
     var pgHelper:PostgresSSHHelper | null =null
     try {
-
-
         const {machine} = isMachineVerified;
         const vpsIp=machine.vps_ip as string;
+        const existingDatabase=await db.select().from(deployed_db).where(and(eq(deployed_db.host,vpsIp),eq(deployed_db.dbName,dbName)));
+        if(existingDatabase.length>0){
+            set.status=StatusCode.BAD_REQUEST;
+            return {
+                message:"Database with this name already exists on this machine"
+            }
+        }
         const decryptedPassword = await decryptPassword(machine.vps_password);
         ssh = new SSHClient({
             host: vpsIp,
@@ -37,7 +43,6 @@ const deployPostgresController = async ({body,set,userId}:Context | any) => {
             password: decryptedPassword
         })
         await ssh.connect();
-
         pgHelper = new PostgresSSHHelper(ssh);
         await pgHelper.install();
         await pgHelper.start();
