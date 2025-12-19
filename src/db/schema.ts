@@ -2,15 +2,15 @@ import {pgTable, timestamp, varchar, text, integer, serial} from "drizzle-orm/pg
 
 export const deployed_db=pgTable("deployed_db",{
     id:serial("id").primaryKey(),
-    db_name:varchar("name").notNull(),
+    dbName:varchar("db_name").notNull(),
     username:varchar("username").notNull(),
-    password:varchar("").notNull(),
+    password:varchar("password").notNull(),
     host:varchar("host").notNull(),
-    db_type:varchar("db_type").notNull(),
-    vpsId:integer("vpsId").notNull(),
-    userId:integer("userId").notNull(),
+    dbType:varchar("db_type").notNull(),
+    vpsId:integer("vps_id").notNull(),
+    userId:integer("user_id").notNull(),
     status:varchar("status").notNull(),
-    created_at:timestamp("created_at").notNull()
+    createdAt:timestamp("created_at").defaultNow().notNull()
 })
 // export const deployed_caching=pgTable("deployed_caching",{
 //     id:serial("id").primaryKey(),

@@ -4,6 +4,7 @@ import {cors} from "@elysiajs/cors"
 import checkAuth from "./middlewares/checkAuth";
 import deployPostgresController from "./controllers/deploy-postgres";
 import deleteDatabaseController from "./controllers/deleteDatabaseController";
+import getdbController from "./controllers/getdbController";
 config()
 const app = new Elysia();
 const origins = ["http://localhost:5173","https://zyotraportal.ramkrishna.cloud"];
@@ -24,7 +25,8 @@ app.get("/",()=>{
 app
     .use(checkAuth)
     .post("/deploy-postgres",deployPostgresController)
-    .post("/delete-db",deleteDatabaseController)
+    .delete("/delete-db/:id",deleteDatabaseController)
+    .get("/get-db",getdbController)
 app.listen(process.env.PORT as string)
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
