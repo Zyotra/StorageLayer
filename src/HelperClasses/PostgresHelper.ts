@@ -150,4 +150,12 @@ EOSQL`);
             onLog
         );
     }
+    async getTablesList(databaseName: string, onLog?: (chunk: string) => void): Promise<string[]> {
+        const tables = await this.ssh.exec(
+            `sudo -u postgres psql -d ${databaseName} -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';"`,
+            onLog
+        );
+        const tablesList = tables.output.trim().split('\n');
+        return tablesList.map(table => table.trim());
+    }
 }
