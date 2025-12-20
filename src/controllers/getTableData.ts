@@ -5,10 +5,10 @@ import { StatusCode } from "../types/types";
 import verifyMachine from "../utils/verifyMachine";
 import decryptVpsPassword from "../utils/decryptPassword";
 
-const getTableData=async({set,body,params,userId}:Context | any)=>{
-    const req=body as {databaseName:string,vpsId:string,vpsIp:string,tableName:string};
-    const {databaseName,vpsId,vpsIp,tableName}=req;
-    if(!databaseName || !vpsId || !vpsIp || !tableName){
+const getTableData=async({set,body,userId}:Context | any)=>{
+    const req=body as {databaseName:string,vpsId:string,vpsIp:string,tableName:string,username:string};
+    const {databaseName,vpsId,vpsIp,tableName,username}=req;
+    if(!databaseName || !vpsId || !vpsIp || !tableName || !username){
         set.status=StatusCode.BAD_REQUEST
         return{
             message:"Invalid request body."
@@ -34,10 +34,22 @@ const getTableData=async({set,body,params,userId}:Context | any)=>{
         await ssh.connect();
         console.log("connected to ssh")
         pgHelper = new PostgresSSHHelper(ssh);
-
+        const data=await pgHelper.getTableData(databaseName,tableName,username)
+        set.status=StatusCode.OK
+        return{
+            status:"success",
+            data
+        }
     } catch (error) {
-        
+        set.status=StatusCode.INTERNAL_SERVER_ERROR
+        return{
+            message:error
+        }
     }finally{
-
+        if(ssh){
+            await ssh.close()
+        }
     }
 }
+
+export default getTableData;
