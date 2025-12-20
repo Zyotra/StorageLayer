@@ -73,16 +73,45 @@ export class PostgresSSHHelper {
     );
   }
 
-  async executeSQL(
+  async executeSql(
     sql: string,
-    database: string = "postgres",
+    username: string,
+    database: string,
     onLog?: (chunk: string) => void
-  ): Promise<CommandResult> {
-    return await this.ssh.exec(
-      `sudo -u postgres psql -d ${database} -c "${sql.replace(/"/g, '\\"')}"`,
-      onLog
+) {
+    // Validate inputs
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(username)) {
+        throw new Error("Invalid username");
+    }
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(database)) {
+        throw new Error("Invalid database name");
+    }
+    
+    // Basic SQL validation (prevent obvious injection)
+    if (sql.includes(';') && !sql.trim().endsWith(';')) {
+        throw new Error("Multiple SQL statements not allowed");
+    }
+    
+    // Execute SQL
+    const result = await this.ssh.exec(
+        `psql -U ${username} -d ${database} -c "${sql.replace(/"/g, '\\"')}" --csv`,
+        onLog
     );
-  }
+    
+    // Check for errors
+    if (result.exitCode !== 0) {
+        throw new Error(`SQL execution failed: ${result.output}`);
+    }
+    
+    // Parse CSV output
+    const parsed = Papa.parse(result.output.trim(), {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: true,
+    });
+    
+    return parsed.data;
+}
 
   async executeSQLFile(
     sqlContent: string,

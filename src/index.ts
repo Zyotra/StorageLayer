@@ -7,6 +7,7 @@ import deleteDatabaseController from "./controllers/deleteDatabaseController";
 import getdbController from "./controllers/getdbController";
 import getTablesListController from "./controllers/getTablesListController";
 import getTableData from "./controllers/getTableData";
+import runQuery from "./controllers/runQuery";
 config()
 const app = new Elysia();
 const origins = ["http://localhost:5173","https://zyotraportal.ramkrishna.cloud"];
@@ -31,6 +32,7 @@ app
     .get("/get-db",getdbController)
     .post("/get-tables-list",getTablesListController)
     .post("/get-table-data",getTableData)
+    .post("/run-query",runQuery)
 app.listen(process.env.PORT as string)
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
