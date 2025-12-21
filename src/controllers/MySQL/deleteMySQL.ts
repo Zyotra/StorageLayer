@@ -10,7 +10,7 @@ import verifyMachine from "../../utils/verifyMachine";
 const deleteMySQL=async({body,set,userId}:Context | any)=>{
     const req = body as { vpsId: string,vpsIp:string, dbName: string,userName:string, password: string,rootPassword:string };
     const {vpsId,vpsIp,dbName,userName,password,rootPassword} = req;
-    if(!userName || !password || !dbName || !vpsIp || !vpsId || !rootPassword){
+    if(!userName || !password || !dbName || !vpsIp || !vpsId){
         set.status = StatusCode.BAD_REQUEST;
         return {
             message: "Invalid request body"
@@ -33,12 +33,13 @@ const deleteMySQL=async({body,set,userId}:Context | any)=>{
             host:vpsIp,
             password:hashedPassword
         })
+        await ssh.connect()
         sqlHelper=new MySQLHelper(ssh)
         await sqlHelper.dropDatabase(userName,password,dbName)
         await db.delete(deployed_db).where(and(
             eq(deployed_db.dbName,dbName),
             eq(deployed_db.dbType,"mysql"),
-            eq(deployed_db.host,vpsId)
+            eq(deployed_db.host,vpsIp)
         ))
         set.status=StatusCode.OK
         return {
@@ -46,6 +47,7 @@ const deleteMySQL=async({body,set,userId}:Context | any)=>{
             message:"Database deleted succesfully"
         }
     }catch(error){
+        console.log("Error while deleting",error)
         set.status=StatusCode.INTERNAL_SERVER_ERROR
         return{
             status:"Internal Server Error",
