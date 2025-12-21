@@ -9,11 +9,11 @@ import SSHClient from "../SSHClient/SSHClient";
 import { PostgresSSHHelper } from "../HelperClasses/PostgresHelper";
 import parseTableNames from "../utils/parseTableNames";
 const getTablesListController=async({body,set,userId}:Context | any)=>{
-    const req=body as {databaseName:string,vpsId:string,vpsIp:string};
-    const {databaseName,vpsId,vpsIp}=req;
+    const req=body as {databaseName:string,vpsId:string,vpsIp:string,username:string};
+    const {databaseName,vpsId,vpsIp,username}=req;
     var ssh:SSHClient | null =null;
     var pgHelper:PostgresSSHHelper | null =null;
-    if(!databaseName || !vpsId || !vpsIp){
+    if(!databaseName || !vpsId || !vpsIp || !username){
         set.status=StatusCode.BAD_REQUEST;
         return {
             message:"Invalid request body"

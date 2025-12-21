@@ -12,3 +12,15 @@ export const deployed_db=pgTable("deployed_db",{
     status:varchar("status").notNull(),
     createdAt:timestamp("created_at").defaultNow().notNull()
 })
+
+export const caching=pgTable("caching",{
+    id:serial("id").primaryKey(),
+    cacheName:varchar("cache_name").notNull(),
+    password:varchar("password").notNull(),
+    host:varchar("host").notNull(),
+    vpsId:integer("vps_id").notNull(),
+    port:integer("port").notNull().unique(),
+    cachingType:varchar("caching_type").default("redis"),
+    status:varchar("status").notNull().default("running"),
+    createdAt:timestamp("created_at").defaultNow().notNull()
+})
