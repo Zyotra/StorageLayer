@@ -66,4 +66,4 @@ const runMySQLQuery=async({body,set,userId}:Context | any)=>{
         }
       }
 }
-export default runQuery;
+export default runMySQLQuery;
