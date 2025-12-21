@@ -7,7 +7,7 @@ import decryptVpsPassword from "../../utils/decryptPassword";
 
 const getMySQLTableList=async({body,set,userId}:Context | any)=>{
     const req=body as {databaseName:string,vpsId:string,vpsIp:string,tableName:string,username:string,password:string};
-    const {vpsId,vpsIp,username,password}=req;
+    const {vpsId,vpsIp,username,password,databaseName}=req;
     if(!vpsId || !vpsIp || !username || !password){
         set.status=StatusCode.BAD_REQUEST
         return{
@@ -34,7 +34,7 @@ const getMySQLTableList=async({body,set,userId}:Context | any)=>{
         await ssh.connect();
         console.log("connected to ssh")
         mySQLHelper= new MySQLHelper(ssh);
-        const tableData=await mySQLHelper.listDatabases(username,password)
+        const tableData=await mySQLHelper.listTables(databaseName,username,password)
         set.status=StatusCode.OK
         return{
             status:"success",

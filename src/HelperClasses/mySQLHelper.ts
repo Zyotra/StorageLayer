@@ -296,41 +296,38 @@ EOF`,
    * Get table data with CSV parsing
    */
   async getTableData(
-    database: string,
+    databaseName: string,
     tableName: string,
     username: string,
     password: string,
     onLog?: (chunk: string) => void
-  ): Promise<any[]> {
-    this.validateIdentifier(database, "database");
-    this.validateIdentifier(tableName, "table");
-    this.validateIdentifier(username, "username");
-
-    // Verify table exists
-    const tables = await this.listTables(database, username, password);
-    if (!tables.includes(tableName)) {
-      throw new Error(`Table '${tableName}' not found or access denied`);
+  ) {
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableName)) {
+      throw new Error("Invalid table name");
     }
-
+  
     const result = await this.ssh.exec(
-      `mysql -u ${username} -p'${password}' -D ${database} -e "SELECT * FROM \\\`${tableName}\\\`;" --batch`,
+      `mysql -u ${username} -p'${password}' -D ${databaseName} --batch --raw -e "SELECT * FROM \\\`${tableName}\\\`;"`,
       onLog
     );
-
+  
     if (result.exitCode !== 0) {
-      throw new Error(`Failed to get table data: ${result.output}`);
+      throw new Error(`Database query failed: ${result.output}`);
     }
-
-    // MySQL --batch output is tab-separated
+  
     const parsed = Papa.parse(result.output.trim(), {
       header: true,
       delimiter: "\t",
       skipEmptyLines: true,
       dynamicTyping: true,
     });
-
+  
     return parsed.data;
   }
+  
+  
+  
+  
 
   /**
    * Get table data with pagination
@@ -398,9 +395,9 @@ EOF`,
 
     // Only allow SELECT queries
     const trimmedSql = sql.trim().toUpperCase();
-    if (!trimmedSql.startsWith("SELECT")) {
-      throw new Error("Only SELECT queries are allowed");
-    }
+    // if (!trimmedSql.startsWith("SELECT")) {
+    //   throw new Error("Only SELECT queries are allowed");
+    // }
 
     // Prevent multiple statements
     const statements = sql.split(";").filter((s) => s.trim());

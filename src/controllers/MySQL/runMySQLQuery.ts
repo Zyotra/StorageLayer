@@ -55,7 +55,7 @@ const runMySQLQuery=async({body,set,userId}:Context | any)=>{
             rows:result
         }
       } catch (error) {
-        console.log("Error while running query")
+        console.log("Error while running query",error)
         set.status=StatusCode.INTERNAL_SERVER_ERROR
         return{
             message:error
