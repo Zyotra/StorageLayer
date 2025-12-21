@@ -62,51 +62,111 @@ class MySQLHelper {
     appPassword: string,
     databaseName: string,
     onLog?: (chunk: string) => void
-  ): Promise<void> {
+  ): Promise<{
+    success: boolean;
+    existingInstallation: boolean;
+    message: string;
+  }> {
+    // 1. Check if MySQL is already installed and configured
+    const statusCheck = await this.ssh.exec(
+      `sudo systemctl is-active mysql 2>/dev/null`,
+      onLog
+    );
+    const existingInstallation =
+      statusCheck.exitCode === 0 && statusCheck.output.trim() === "active";
+
+    if (existingInstallation) {
+      console.log("MySQL is already running. Checking configuration...");
+
+      // Try to connect with provided root password
+      const authCheck = await this.ssh.exec(
+        `mysql -u root -p'${rootPassword}' -e "SELECT 1;" 2>&1`,
+        onLog
+      );
+
+      if (authCheck.exitCode !== 0) {
+        // Root password doesn't match - ask user what to do
+        throw new Error(
+          "'MySQL is already installed with a different root password. Please provide the correct password or reset it manually."
+        );
+      }
+
+      // Password is correct, proceed with database/user creation only
+      await this.ssh.runSequential(
+        [
+          // Create database if doesn't exist
+          `mysql -u root -p'${rootPassword}' -e "CREATE DATABASE IF NOT EXISTS ${databaseName};"`,
+
+          // Create user if doesn't exist
+          `mysql -u root -p'${rootPassword}' -e "CREATE USER IF NOT EXISTS '${appUsername}'@'localhost' IDENTIFIED BY '${appPassword}';"`,
+
+          // Grant privileges
+          `mysql -u root -p'${rootPassword}' -e "GRANT ALL PRIVILEGES ON ${databaseName}.* TO '${appUsername}'@'localhost';"`,
+
+          // Flush privileges
+          `mysql -u root -p'${rootPassword}' -e "FLUSH PRIVILEGES;"`,
+        ],
+        onLog
+      );
+
+      return {
+        success: true,
+        existingInstallation: true,
+        message: `Database '${databaseName}' and user '${appUsername}' created successfully on existing MySQL installation.`,
+      };
+    }
+
+    // 2. Fresh installation
     await this.ssh.runSequential(
       [
-        // 1. Update system
+        // Update system
         `sudo apt update`,
 
-        // 2. Install MySQL Server (non-interactive)
+        // Install MySQL Server
         `sudo DEBIAN_FRONTEND=noninteractive apt install -y mysql-server`,
 
-        // 3. Start MySQL service
+        // Start MySQL
         `sudo systemctl start mysql`,
 
-        // 4. Enable MySQL on boot
+        // Enable on boot
         `sudo systemctl enable mysql`,
 
-        // 5. Wait for MySQL to be ready
-        `sudo mysqladmin ping -h localhost --wait=30`,
+        // Wait for MySQL to be ready
+        `sudo mysqladmin ping -h localhost --wait=30 || echo "Waiting for MySQL..."`,
 
-        // 6. Secure installation & set root password
+        // Secure installation & set root password
         `sudo mysql << 'EOF'
-    ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${rootPassword}';
-    DELETE FROM mysql.user WHERE User='';
-    DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
-    DROP DATABASE IF EXISTS test;
-    DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
-    FLUSH PRIVILEGES;
-    EOF`,
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${rootPassword}';
+DELETE FROM mysql.user WHERE User='';
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DROP DATABASE IF EXISTS test;
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+FLUSH PRIVILEGES;
+EOF`,
 
-        // 7. Create database
-        `sudo mysql -u root -p'${rootPassword}' -e "CREATE DATABASE IF NOT EXISTS ${databaseName};"`,
+        // Create database
+        `mysql -u root -p'${rootPassword}' -e "CREATE DATABASE IF NOT EXISTS ${databaseName};"`,
 
-        // 8. Create application user
-        `sudo mysql -u root -p'${rootPassword}' -e "CREATE USER IF NOT EXISTS '${appUsername}'@'localhost' IDENTIFIED BY '${appPassword}';"`,
+        // Create user
+        `mysql -u root -p'${rootPassword}' -e "CREATE USER IF NOT EXISTS '${appUsername}'@'localhost' IDENTIFIED BY '${appPassword}';"`,
 
-        // 9. Grant privileges
-        `sudo mysql -u root -p'${rootPassword}' -e "GRANT ALL PRIVILEGES ON ${databaseName}.* TO '${appUsername}'@'localhost';"`,
+        // Grant privileges
+        `mysql -u root -p'${rootPassword}' -e "GRANT ALL PRIVILEGES ON ${databaseName}.* TO '${appUsername}'@'localhost';"`,
 
-        // 10. Flush privileges
-        `sudo mysql -u root -p'${rootPassword}' -e "FLUSH PRIVILEGES;"`,
+        // Flush privileges
+        `mysql -u root -p'${rootPassword}' -e "FLUSH PRIVILEGES;"`,
 
-        // 11. Verify installation
+        // Verify
         `mysql -u ${appUsername} -p'${appPassword}' -e "SELECT 'MySQL setup successful!' as status;"`,
       ],
       onLog
     );
+
+    return {
+      success: true,
+      existingInstallation: false,
+      message: `MySQL installed successfully. Database '${databaseName}' and user '${appUsername}' created.`,
+    };
   }
 
   async createMySQLUser(
@@ -158,7 +218,7 @@ class MySQLHelper {
     this.validateIdentifier(username, "username");
 
     const result = await this.ssh.exec(
-      `mysql -u ${username} -p'${password}' -e "SELECT schema_name as name, ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) as size_mb FROM information_schema.tables GROUP BY schema_name;" --batch --skip-column-names`,
+      `mysql -u ${username} -p'${password}' -e "SELECT table_schema as name, ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) as size_mb FROM information_schema.tables GROUP BY table_schema;" --batch --skip-column-names`,
       onLog
     );
 
@@ -491,7 +551,7 @@ EOF`,
     database: string,
     username: string,
     password: string,
-    outputPath: string,
+    outputPath: string="./MySQLBackup",
     onLog?: (chunk: string) => void
   ): Promise<CommandResult> {
     this.validateIdentifier(database, "database");
@@ -525,6 +585,60 @@ EOF`,
     }
 
     return `${result.output.trim()} MB`;
+  }
+  async accessBackupSafely(
+    originalDatabase: string,
+    username: string,
+    password: string,
+    backupPath: string,
+    onLog?: (chunk: string) => void
+  ): Promise<string> {
+    const tempDbName = `temp_${originalDatabase}_${Date.now()}`;
+
+    try {
+      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(originalDatabase)) {
+        throw new Error("Invalid table name");
+      }
+      // 1. Create temporary database
+      await this.ssh.exec(
+        `mysql -u ${username} -p'${password}' -e "CREATE DATABASE ${tempDbName};"`,
+        onLog
+      );
+
+      // 2. Restore backup to temp database
+      await this.ssh.exec(
+        `mysql -u ${username} -p'${password}' ${tempDbName} < ${backupPath}`,
+        onLog
+      );
+
+      console.log(`✅ Backup restored to temporary database: ${tempDbName}`);
+      return tempDbName;
+    } catch (error) {
+      // Cleanup on failure
+      await this.ssh.exec(
+        `mysql -u ${username} -p'${password}' -e "DROP DATABASE IF EXISTS ${tempDbName};"`,
+        onLog
+      );
+      throw error;
+    }
+  }
+  /*
+   * Delete database during invalid operations
+   */
+  async dropDatabase(
+    username: string,
+    password: string,
+    databaseName: string,
+    onLog?: (chunk: string) => void
+  ) {
+    try {
+      const result = await this.ssh.exec(
+        `mysql -u ${username} -p${password} -e "DROP DATABASE IF EXISTS ${databaseName};" || true`,
+        onLog
+      );
+    } catch (error) {
+        throw new Error(`Error while dropping the database: ${error instanceof Error ? error.message : String(error)}`)
+    }
   }
 }
 

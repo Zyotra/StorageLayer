@@ -10,7 +10,7 @@ import { and, eq } from "drizzle-orm";
 
 const deployPostgresController = async ({body,set,userId}:Context | any) => {
     const req = body as { vpsId: string,vpsIp:string, dbName: string,userName:string, password: string };
-    const {vpsId,vpsIp,dbName,userName,password,} = req;
+    const {vpsId,vpsIp,dbName,userName,password} = req;
     if(!userName || !password || !dbName || !vpsIp || !vpsId){
         set.status = StatusCode.BAD_REQUEST;
         return {
@@ -30,7 +30,7 @@ const deployPostgresController = async ({body,set,userId}:Context | any) => {
         const {machine} = isMachineVerified;
         const vpsIp=machine.vps_ip as string;
         const existingDatabase=await db.select().from(deployed_db).where(and(eq(deployed_db.host,vpsIp),eq(deployed_db.dbName,dbName)));
-        if(existingDatabase.length>0){
+        if(existingDatabase.length){
             set.status=StatusCode.BAD_REQUEST;
             return {
                 message:"Database with this name already exists on this machine"

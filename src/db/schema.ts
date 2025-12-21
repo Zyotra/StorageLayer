@@ -12,8 +12,3 @@ export const deployed_db=pgTable("deployed_db",{
     status:varchar("status").notNull(),
     createdAt:timestamp("created_at").defaultNow().notNull()
 })
-// export const deployed_caching=pgTable("deployed_caching",{
-//     id:serial("id").primaryKey(),
-//     host:varchar("host").notNull(),
-//     userId:integer("userId").notNull(),
-// })
