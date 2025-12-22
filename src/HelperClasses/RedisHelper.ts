@@ -76,8 +76,6 @@ class RedisHelper {
       // start redis (try without sudo, fallback to sudo)
       `redis-server ${configPath} --daemonize yes || sudo redis-server ${configPath} --daemonize yes`
     ];
-
-    // run commands sequentially and surface failures
     await this.ssh.runSequential(commands, onLog);
 
     // verify start
