@@ -19,6 +19,7 @@ export const caching=pgTable("caching",{
     password:varchar("password").notNull(),
     host:varchar("host").notNull(),
     vpsId:integer("vps_id").notNull(),
+    userId:integer("user_id").notNull(),
     port:integer("port").notNull().unique(),
     cachingType:varchar("caching_type").default("redis"),
     status:varchar("status").notNull().default("running"),

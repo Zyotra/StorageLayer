@@ -33,10 +33,10 @@ const stopRedisServer = async ({ body, set, userId }: Context | any) => {
   var redis: RedisHelper | null = null;
   const { machine } = isMachineVerified;
   try {
-    const hashedPassword = await decryptVpsPassword(password);
+    const hashedPassword = await decryptVpsPassword(machine.vps_password);
     ssh = new SSHClient({
       host: machine.vps_ip,
-      password: password,
+      password: hashedPassword,
       username: "root",
     });
     await ssh.connect();

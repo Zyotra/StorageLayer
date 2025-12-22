@@ -22,3 +22,4 @@ requirepass ${password}
 bind 0.0.0.0
 `.trim(); // removes leading/trailing newlines
 }
+export default getRedisConfig;

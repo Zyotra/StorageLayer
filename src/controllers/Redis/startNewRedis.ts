@@ -32,29 +32,31 @@ const startNewRedis=async({body,set,userId}:Context | any)=>{
     var redis:RedisHelper|null=null;
     const {machine}=isMachineVerified
     try {
-        const hashedPassword=await decryptVpsPassword(password)
+        const hashedPassword=await decryptVpsPassword(machine.vps_password)
         ssh=new SSHClient({
             host:machine.vps_ip,
-            password:password,
+            password:hashedPassword,
             username:"root"
         })
         await ssh.connect()
         redis=new RedisHelper(ssh)
         await redis.installRedisCLI();
        const result= await redis.startNewRedisServer(name,password,port)
+       console.log("Redis start result:",result)
        await db.insert(caching).values({
         cacheName:name,
         port:parseInt(port),
         password:password,
         vpsId:parseInt(vpsId),
+        userId:parseInt(userId),
         host:vpsIp
        })
        set.status=StatusCode.OK
        return{
         message:"successully created new redis server"
        }
-       
     } catch (error) {
+        console.log("Error while starting new redis server",error)
         set.status=StatusCode.INTERNAL_SERVER_ERROR
         return{
             message:error

@@ -18,6 +18,7 @@ import getMySQLTableData from "./controllers/MySQL/getTableDataMySQL";
 import startNewRedis from "./controllers/Redis/startNewRedis";
 import deleteRedisServer from "./controllers/Redis/deleteRedisServer";
 import stopRedisServer from "./controllers/Redis/stopRedisServer";
+import getRedisServer from "./controllers/Redis/getRedisServer";
 config()
 const app = new Elysia();
 const origins = ["http://localhost:5173","https://zyotraportal.ramkrishna.cloud"];
@@ -50,7 +51,8 @@ app
     .post("/run-mysql-query",runMySQLQuery)
     .post("/backup-mysql-db",backupMySQL)
     .post("/backup-postgres-db",backupPostgres)
-    .post("/deploy-redis-cache",startNewRedis)
+    .get("/get-redis-server",getRedisServer)
+    .post("/deploy-redis",startNewRedis)
     .post("/stop-redis-server",stopRedisServer)
     .post("/delete-redis-server",deleteRedisServer)
 app.listen(process.env.PORT as string)
