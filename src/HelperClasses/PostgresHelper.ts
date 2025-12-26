@@ -94,10 +94,7 @@ export class PostgresSSHHelper {
 
     // Execute SQL
     const result = await this.ssh.exec(
-      `psql -U ${username} -d ${database} -c "${sql.replace(
-        /"/g,
-        '\\"'
-      )}" --csv`,
+      `sudo -u postgres psql -d ${database} -c "${sql.replace(/"/g, '\\"')}" --csv`,
       onLog
     );
 
@@ -201,7 +198,7 @@ EOSQL`);
       throw new Error("Invalid table name");
     }
     const result = await this.ssh.exec(
-      `psql -U ${username} -d ${databaseName} -c "SELECT * FROM \"${tableName}\";" --csv`,
+      `sudo -u postgres psql -d ${databaseName} -c "SELECT * FROM \"${tableName}\";" --csv`,
       onLog
     );
     if (result.exitCode !== 0) {
@@ -265,7 +262,7 @@ EOSQL`);
   async backupDatabase(
     database: string,
     username: string,
-    outputPath: string="./postgresBackup",
+    outputPath: string = "./postgresBackup",
     onLog?: (chunk: string) => void
   ): Promise<CommandResult> {
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(database)) {
