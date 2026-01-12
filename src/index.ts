@@ -19,6 +19,7 @@ import startNewRedis from "./controllers/Redis/startNewRedis";
 import deleteRedisServer from "./controllers/Redis/deleteRedisServer";
 import stopRedisServer from "./controllers/Redis/stopRedisServer";
 import getRedisServer from "./controllers/Redis/getRedisServer";
+import startExistingRedisServer from "./controllers/Redis/startExistingRedisServer";
 config()
 const app = new Elysia();
 const origins = ["http://localhost:5173","https://zyotraportal.ramkrishna.cloud"];
@@ -55,6 +56,7 @@ app
     .post("/deploy-redis",startNewRedis)
     .post("/stop-redis-server",stopRedisServer)
     .post("/delete-redis-server",deleteRedisServer)
+    .post("/start-stopped-redis-server",startExistingRedisServer)
 app.listen(process.env.PORT as string)
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`

@@ -94,5 +94,24 @@ class RedisHelper {
   async stopRedisSever(password: string, port: string) {
     await this.ssh.exec(`redis-cli -p ${port} -a ${password} shutdown`)
   }
+
+  async startExistingRedisServer(name: string, password: string, port: string) {
+    const configPath = `/etc/redis/${name}.conf`;
+    
+    // Start redis server using existing config
+    const result = await this.ssh.exec(
+      `redis-server ${configPath} --daemonize yes || sudo redis-server ${configPath} --daemonize yes`
+    );
+    
+    if (result.exitCode !== 0) {
+      throw new Error(`Failed to start redis server: ${result.output}`);
+    }
+
+    // Verify start
+    const check = await this.ssh.exec(`redis-cli -p ${port} -a ${password} ping`);
+    if (check.exitCode !== 0 || !/PONG/.test(check.output || "")) {
+      throw new Error(`Failed to verify redis start: ${check.output}`);
+    }
+  }
 }
 export default RedisHelper;
