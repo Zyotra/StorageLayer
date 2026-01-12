@@ -33,10 +33,10 @@ const deleteRedisServer = async ({ body, set, userId }: Context | any) => {
   var redis: RedisHelper | null = null;
   const { machine } = isMachineVerified;
   try {
-    const hashedPassword = await decryptVpsPassword(password);
+    const hashedPassword = await decryptVpsPassword(machine.vps_password);
     ssh = new SSHClient({
       host: machine.vps_ip,
-      password: password,
+      password: hashedPassword,
       username: "root",
     });
     await ssh.connect();
@@ -50,6 +50,7 @@ const deleteRedisServer = async ({ body, set, userId }: Context | any) => {
       message: "successully deleted redis server",
     };
   } catch (error) {
+    console.log("Error while deleting redis server:", error);
     set.status = StatusCode.INTERNAL_SERVER_ERROR;
     return {
       message: error,

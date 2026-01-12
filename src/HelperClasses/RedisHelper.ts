@@ -33,21 +33,28 @@ class RedisHelper {
     console.log("Installing redis cli");
     this.ssh.exec(`sudo apt install redis-server -y`, onLog);
   }
-  async deleteRedisServer(redisName: string,password:string,port:string,onLog?:(chunk:string)=>{}) {
+  async deleteRedisServer(redisName: string, password: string, port: string, onLog?: (chunk: string) => {}) {
     const commands = [
-      `redis-cli -p ${port} -a ${password} shutdown`,
-      `sudo systemctl disable ${redisName}`,
-      `sudo rm /etc/systemd/system/${redisName}.service`,
+      // Shutdown redis (ignore errors if not running)
+      `redis-cli -p ${port} -a ${password} shutdown || true`,
+      // Kill any remaining redis process on this port
+      `sudo kill $(sudo lsof -t -i:${port}) 2>/dev/null || true`,
+      // Disable systemd service if it exists (ignore errors)
+      `sudo systemctl disable ${redisName} 2>/dev/null || true`,
+      `sudo systemctl stop ${redisName} 2>/dev/null || true`,
+      // Remove service file if it exists
+      `sudo rm -f /etc/systemd/system/${redisName}.service`,
+      // Reload systemd
       `sudo systemctl daemon-reexec`,
       `sudo systemctl daemon-reload`,
-      `sudo rm /etc/redis/${redisName}.conf`,
+      // Remove config and data files
+      `sudo rm -f /etc/redis/${redisName}.conf`,
       `sudo rm -f /var/log/redis/${redisName}.log`,
       `sudo rm -rf /var/lib/${redisName}`
     ];
-    await this.ssh.runSequential(commands,onLog)
+    await this.ssh.runSequential(commands, onLog);
   }
-  // ...existing code...
-    async startNewRedisServer(
+  async startNewRedisServer(
     name: string,
     password: string,
     port: string,
