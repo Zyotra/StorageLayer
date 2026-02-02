@@ -16,10 +16,40 @@ export class PostgresSSHHelper {
   constructor(private ssh: SSHClient) {}
 
   async install(onLog?: (chunk: string) => void): Promise<void> {
-    await this.ssh.runSequential(
-      ["sudo apt update", "sudo apt install -y postgresql postgresql-contrib"],
+    // First, check if PostgreSQL is already installed
+    const checkInstalled = await this.ssh.exec("dpkg -l | grep postgresql 2>/dev/null || true", onLog);
+    if (checkInstalled.output.includes("postgresql") && checkInstalled.output.includes("ii")) {
+      if (onLog) onLog("PostgreSQL is already installed, skipping installation.\n");
+      return;
+    }
+    
+    // Clean up any stale locks (ignore errors)
+    await this.ssh.exec("sudo rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock* 2>/dev/null || true", onLog);
+    await this.ssh.exec("sudo dpkg --configure -a 2>/dev/null || true", onLog);
+    
+    // Kill any running apt processes that might hold locks
+    await this.ssh.exec("sudo killall apt apt-get 2>/dev/null || true", onLog);
+    
+    // Wait a moment for locks to be released
+    await this.ssh.exec("sleep 2", onLog);
+    
+    // Update package list
+    const updateResult = await this.ssh.exec("sudo apt update -y 2>&1", onLog);
+    if (updateResult.exitCode !== 0) {
+      if (onLog) onLog(`Warning: apt update returned ${updateResult.exitCode}. Output: ${updateResult.output}\n`);
+    }
+    
+    // Install PostgreSQL with DEBIAN_FRONTEND to avoid interactive prompts
+    const installResult = await this.ssh.exec(
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y postgresql postgresql-contrib 2>&1",
       onLog
     );
+    
+    if (installResult.exitCode !== 0) {
+      // Log the full output for debugging
+      console.error("PostgreSQL installation failed. Full output:", installResult.output);
+      throw new Error(`PostgreSQL installation failed with exit code ${installResult.exitCode}: ${installResult.output.slice(-500)}`);
+    }
   }
 
   async checkStatus(): Promise<boolean> {

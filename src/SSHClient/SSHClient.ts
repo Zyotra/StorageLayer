@@ -10,7 +10,12 @@ class SSHClient {
     private config: ConnectConfig;
     constructor(config: ConnectConfig) {
         this.conn = new Client();
-        this.config = config;
+        this.config = {
+            ...config,
+            readyTimeout: 30000,           // 30 seconds to establish connection
+            keepaliveInterval: 10000,       // Send keepalive every 10 seconds
+            keepaliveCountMax: 10,          // Allow 10 missed keepalives before disconnect
+        };
     }
     connect(): Promise<void> {
         return new Promise((resolve, reject) => {
